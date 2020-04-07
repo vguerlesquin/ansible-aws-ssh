@@ -1,28 +1,10 @@
 # Ansible version 2.7.0 on CentOS7
 FROM docker.io/geerlingguy/docker-centos7-ansible
 
-# ARG access_key_id
-# ARG secret_access_key
-#
-# # setup AWS environment variables
-# ENV AWS_ACCESS_KEY_ID=$access_key_id
-# ENV AWS_SECRET_ACCESS_KEY=$secret_access_key
-# ENV AWS_DEFAULT_REGION="ca-central-1"
-
 # Install ssh client
 RUN yum -y update && yum -y install openssh-clients
 
-# Add key
-# COPY ./mountebank.pem /root/.ssh/mountebank.pem
-# RUN chmod 400 /root/.ssh/mountebank.pem
 
-# setup boto credentials file
-# RUN mkdir -p $HOME_RUNNER/.aws \
-#     && touch $HOME_RUNNER/.aws/credentials
-# RUN echo $'[default] \n\
-# aws_access_key_id = '$AWS_ACCESS_KEY_ID$'\n\
-# aws_secret_access_key = '$AWS_SECRET_ACCESS_KEY$'\n\
-# region = '$AWS_DEFAULT_REGION$'\n' >> $HOME_RUNNER/.aws/credentials
 RUN pip install --upgrade pip
 # setup ec2.py scripts and config
 RUN curl https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.py -o $HOME_RUNNER/ec2.py \
