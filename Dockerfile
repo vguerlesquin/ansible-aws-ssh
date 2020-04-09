@@ -1,11 +1,41 @@
-# Ansible version 2.7.0 on CentOS7
-FROM docker.io/geerlingguy/docker-centos7-ansible
+FROM centos:8
+LABEL maintainer="Valentin Guerlesquin"
+ENV container=docker
 
-# Install ssh client
-RUN yum -y update && yum -y install openssh-clients
+# Install systemd -- See https://hub.docker.com/_/centos/
+RUN yum -y update; yum clean all; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
 
+# Install requirements.
+RUN yum -y update \
+ && yum -y install \
+      sudo \
+      which \
+      python3-pip \
+      openssh-clients \
+ && yum clean all
 
+RUN ln -s /usr/bin/pip3 /usr/bin/pip 
 RUN pip install --upgrade pip
+
+# Install Ansible via Pip.
+RUN pip install ansible
+
+# Disable requiretty.
+RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/'  /etc/sudoers
+
+# Install Ansible inventory file.
+RUN mkdir -p /etc/ansible
+RUN echo -e '[local]\nlocalhost ansible_connection=local' > /etc/ansible/hosts
+
+
 # setup ec2.py scripts and config
 RUN curl https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.py -o $HOME_RUNNER/ec2.py \
     && mv $HOME_RUNNER/ec2.py /etc/ansible \
@@ -34,3 +64,6 @@ ENV ANSIBLE_INVENTORY /etc/ansible/ec2.py
 ENV EC2_INI_PATH /etc/ansible/ec2.ini
 
 RUN mkdir /var/ssh
+
+VOLUME ["/sys/fs/cgroup"]
+CMD ["/usr/lib/systemd/systemd"]
