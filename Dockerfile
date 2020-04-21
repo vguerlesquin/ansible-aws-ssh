@@ -3,19 +3,15 @@ LABEL maintainer="Valentin Guerlesquin"
 ENV container=docker
 
 # Install what we need
-RUN yum -y update  \
- && yum -y install \
-      sudo \
-      which \
-      python3-pip \
-      openssh-clients \
- && yum clean all
+RUN yum -y -q --nogpgcheck update
+RUN yum -y -q --nogpgcheck install sudo which python3-pip openssh-clients
+RUN yum clean all
 
 RUN ln -s /usr/bin/pip3 /usr/bin/pip
-RUN pip install --upgrade pip
+RUN pip install -q --upgrade pip
 
-# Install Ansible via Pip.
-RUN pip install ansible
+# Install Ansible, boto, docker-py via Pip.
+RUN pip install ansible boto docker-py
 
 # Disable requiretty.
 RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/'  /etc/sudoers
@@ -24,14 +20,12 @@ RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/'  /etc/sudoers
 RUN mkdir -p /etc/ansible
 RUN echo -e '[local]\nlocalhost ansible_connection=local' > /etc/ansible/hosts
 
-
 # setup ec2.py scripts and config
-RUN curl https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.py -o $HOME_RUNNER/ec2.py \
+RUN curl -s https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.py -o $HOME_RUNNER/ec2.py \
     && mv $HOME_RUNNER/ec2.py /etc/ansible \
-    && curl https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.ini -o $HOME_RUNNER/ec2.ini \
+    && curl -s https://raw.githubusercontent.com/ansible/ansible/stable-2.7/contrib/inventory/ec2.ini -o $HOME_RUNNER/ec2.ini \
     && mv $HOME_RUNNER/ec2.ini /etc/ansible \
     && chmod +x /etc/ansible/ec2.py \
-    && pip install boto \
     && sed -i '/destination_variable = /s/public_dns_name/private_dns_name/g' /etc/ansible/ec2.ini \
     && sed -i '/vpc_destination_variable = /s/ip_address/private_ip_address/g' /etc/ansible/ec2.ini
 
@@ -46,8 +40,6 @@ host_key_checking = False \n\
 ssh_args = \n\
 scp_if_ssh = True \n' >> /etc/ansible/ansible.cfg
 
-# add docker-py
-RUN pip install docker-py
 # setup Ansible environment variables
 ENV ANSIBLE_INVENTORY /etc/ansible/ec2.py
 ENV EC2_INI_PATH /etc/ansible/ec2.ini
